@@ -14,6 +14,9 @@ class Config:
     TV_USERNAME = os.getenv('TV_USERNAME')
     TV_PASSWORD = os.getenv('TV_PASSWORD')
     
+    # Authentication settings
+    ALLOW_NOLOGIN = os.getenv('ALLOW_NOLOGIN', 'false').lower() in ('true', '1', 'yes', 'on')
+    
     # Data settings - Configurable bar limit (adjust based on your account capabilities)
     MAX_BARS_PER_REQUEST = int(os.getenv('MAX_BARS_PER_REQUEST', '5000'))
     DEFAULT_INTERVAL = '1h'

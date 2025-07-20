@@ -22,16 +22,62 @@ class TradingViewDataFetcher:
     
     def _connect(self):
         """Establish connection to TradingView."""
+        import logging
+        
+        # Set up nologin detection before connection
+        class NologinDetector(logging.Handler):
+            def __init__(self):
+                super().__init__()
+                self.nologin_detected = False
+                
+            def emit(self, record):
+                if 'nologin' in record.getMessage().lower():
+                    self.nologin_detected = True
+        
+        detector = NologinDetector()
+        tvdatafeed_logger = logging.getLogger('tvDatafeed.main')
+        tvdatafeed_logger.addHandler(detector)
+        
         try:
             if self.username and self.password:
+                logger.info(f"Attempting to connect to TradingView with credentials...")
                 self.tv = TvDatafeed(username=self.username, password=self.password)
-                logger.info(f"Connected to TradingView with credentials ({Config.MAX_BARS_PER_REQUEST:,} bars per request)")
+                
+                # Check immediately if nologin was detected during connection
+                if detector.nologin_detected:
+                    if Config.ALLOW_NOLOGIN:
+                        logger.warning("⚠️  TradingView is using nologin method (limited data access)")
+                        logger.warning("💡 Data access will be limited - consider fixing credentials for full access")
+                        logger.info(f"📊 Connected with nologin mode ({Config.MAX_BARS_PER_REQUEST:,} bars per request)")
+                    else:
+                        logger.error("🚫 AUTHENTICATION FAILED: TradingView is using nologin method")
+                        logger.error("❌ Your credentials are invalid or authentication failed")
+                        logger.error("⚠️  Data access will be severely limited - STOPPING APPLICATION")
+                        logger.error("💡 Set ALLOW_NOLOGIN=true in .env to continue with limited access")
+                        raise ValueError("Authentication failed - nologin method detected. Check your credentials in .env file.")
+                else:
+                    logger.info(f"✅ Successfully connected to TradingView with credentials ({Config.MAX_BARS_PER_REQUEST:,} bars per request)")
             else:
-                self.tv = TvDatafeed()
-                logger.warning(f"Connected to TradingView without credentials (limited data access - {Config.MAX_BARS_PER_REQUEST:,} bars)")
+                if Config.ALLOW_NOLOGIN:
+                    logger.warning("⚠️  No TradingView credentials provided - using nologin mode")
+                    logger.warning("💡 Data access will be limited - add credentials for full access")
+                    self.tv = TvDatafeed()
+                    logger.info(f"📊 Connected without credentials (limited access)")
+                else:
+                    logger.error("No TradingView credentials provided")
+                    logger.error("💡 Set ALLOW_NOLOGIN=true in .env to continue without credentials")
+                    raise ValueError("TradingView credentials are required for full data access")
         except Exception as e:
+            if "nologin" in str(e).lower() or (hasattr(detector, 'nologin_detected') and detector.nologin_detected):
+                logger.error("Failed to authenticate with TradingView - check your credentials")
+                raise ValueError("Authentication failed - nologin method detected. Check your credentials in .env file.")
             logger.error(f"Failed to connect to TradingView: {e}")
             raise
+        finally:
+            # Clean up the detector
+            if tvdatafeed_logger and detector in tvdatafeed_logger.handlers:
+                tvdatafeed_logger.removeHandler(detector)
+    
     
     def _get_interval_object(self, timeframe: str) -> Interval:
         """Convert timeframe string to TvDatafeed Interval object."""
