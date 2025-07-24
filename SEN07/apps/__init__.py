@@ -1,0 +1,1 @@
+# Applications package for SEN07 Auto Trading System 
