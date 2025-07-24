@@ -113,7 +113,7 @@ class TradingViewApp:
             'exchange': exchange,
             'timeframe': timeframe,
             'years_requested': years,
-            'note': 'tvdatafeed limitation: can only fetch most recent data available',
+            'note': 'TradingView WebSocket limitation: can only fetch most recent data available',
             'fetch_time_seconds': fetch_time,
             'total_bars': len(processed_data),
             'data_summary': summary,
@@ -329,12 +329,12 @@ Examples:
         # Print comprehensive summary
         total_time = (datetime.now() - app.start_time).total_seconds()
         print(f"\n{'='*80}")
-        print(f"📊 TRADINGVIEW DATA COLLECTION SUMMARY")
+        print(f"TRADINGVIEW DATA COLLECTION SUMMARY")
         print(f"{'='*80}")
         
         if isinstance(results, dict) and 'total_symbols' in results:
             # Batch results
-            print(f"🔄 BATCH OPERATION:")
+            print(f"BATCH OPERATION:")
             print(f"   Symbols processed: {results['total_symbols']}")
             print(f"   Success rate: {results['success_rate']:.1f}%")
             print(f"   Total time: {total_time:.2f} seconds")
@@ -344,7 +344,7 @@ Examples:
             date_range = summary.get('date_range', {})
             price_stats = summary.get('price_statistics', {})
             
-            print(f"✅ SINGLE SYMBOL OPERATION:")
+            print(f"SINGLE SYMBOL OPERATION:")
             print(f"   Symbol: {results['symbol']} ({args.timeframe} timeframe)")
             print(f"   Requested: {args.years} years of historical data")
             print(f"   Retrieved: {format_number(results['bars_count'])} bars")
@@ -365,7 +365,7 @@ Examples:
                     print(f"   Time coverage: ~{results['bars_count']} days ({years_coverage:.1f} years)")
         
         print(f"{'='*80}")
-        print(f"ℹ️  Note: Due to tvdatafeed limitations, only recent data is available")
+        print(f"Note: Due to TradingView WebSocket limitations, only recent data is available")
         print(f"{'='*80}")
         
     except KeyboardInterrupt:

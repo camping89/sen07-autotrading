@@ -6,7 +6,7 @@ A comprehensive Python application for fetching historical trading data from Tra
 
 - **Multi-Symbol Support**: XAUUSD, BTCUSD, EURUSD, GBPUSD, USDJPY and more
 - **Flexible Timeframes**: From 1-minute to monthly data
-- **Maximum Available Data**: Limited by tvdatafeed library to recent data only
+- **Maximum Available Data**: Limited by TradingView WebSocket to recent data only
 - **Multiple Export Formats**: CSV, JSON, and Parquet
 - **Technical Indicators**: Built-in SMA, EMA, MACD, RSI, Bollinger Bands
 - **Batch Processing**: Process multiple symbols efficiently
@@ -215,9 +215,9 @@ Options:
 
 ## ⚠️ Important Limitation
 
-**tvdatafeed Library Constraint**: This application can only fetch the most recent data available from TradingView. Despite requesting years of historical data, you'll only receive recent data (typically several months to 2+ years depending on the symbol and timeframe).
+**TradingView WebSocket Constraint**: This application can only fetch the most recent data available from TradingView. Despite requesting years of historical data, you'll only receive recent data (typically several months to 2+ years depending on the symbol and timeframe).
 
-**Why?**: The tvdatafeed library scrapes TradingView's web interface, which only shows recent data initially. There's no way to access older historical data programmatically through this method.
+**Why?**: The TradingView WebSocket API returns data from the current time backwards, not from specific historical dates. There's no way to access older historical data programmatically through this method.
 
 **Workaround**: Use longer timeframes (daily, weekly) to get more historical coverage with the same number of bars.
 

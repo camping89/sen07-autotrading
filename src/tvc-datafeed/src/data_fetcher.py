@@ -4,83 +4,60 @@ import time
 import logging
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Tuple
-from tvDatafeed import TvDatafeed, Interval
+from .tradingview_client import TradingViewClient, Interval
 from .config import Config
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class TradingViewDataFetcher:
-    """Class for fetching historical data from TradingView using tvdatafeed."""
+    """Class for fetching historical data from TradingView using direct WebSocket client."""
     
     def __init__(self, username: Optional[str] = None, password: Optional[str] = None):
         """Initialize the data fetcher with optional credentials."""
         self.username = username or Config.TV_USERNAME
         self.password = password or Config.TV_PASSWORD
-        self.tv = None
+        self.client = None
         self._connect()
     
     def _connect(self):
         """Establish connection to TradingView."""
-        import logging
-        
-        # Set up nologin detection before connection
-        class NologinDetector(logging.Handler):
-            def __init__(self):
-                super().__init__()
-                self.nologin_detected = False
-                
-            def emit(self, record):
-                if 'nologin' in record.getMessage().lower():
-                    self.nologin_detected = True
-        
-        detector = NologinDetector()
-        tvdatafeed_logger = logging.getLogger('tvDatafeed.main')
-        tvdatafeed_logger.addHandler(detector)
-        
         try:
             if self.username and self.password:
-                logger.info(f"Attempting to connect to TradingView with credentials...")
-                self.tv = TvDatafeed(username=self.username, password=self.password)
+                logger.info("Attempting to connect to TradingView with credentials...")
+                self.client = TradingViewClient(username=self.username, password=self.password)
                 
-                # Check immediately if nologin was detected during connection
-                if detector.nologin_detected:
+                # Check if authentication was successful
+                if self.client.token == "unauthorized_user_token":
                     if Config.ALLOW_NOLOGIN:
-                        logger.warning("⚠️  TradingView is using nologin method (limited data access)")
+                        logger.warning("⚠️  TradingView authentication failed - using nologin method (limited data access)")
                         logger.warning("💡 Data access will be limited - consider fixing credentials for full access")
-                        logger.info(f"📊 Connected with nologin mode ({Config.MAX_BARS_PER_REQUEST:,} bars per request)")
+                        logger.info(f"Connected with nologin mode ({Config.MAX_BARS_PER_REQUEST:,} bars per request)")
                     else:
-                        logger.error("🚫 AUTHENTICATION FAILED: TradingView is using nologin method")
+                        logger.error("🚫 AUTHENTICATION FAILED: Invalid credentials")
                         logger.error("❌ Your credentials are invalid or authentication failed")
                         logger.error("⚠️  Data access will be severely limited - STOPPING APPLICATION")
                         logger.error("💡 Set ALLOW_NOLOGIN=true in .env to continue with limited access")
-                        raise ValueError("Authentication failed - nologin method detected. Check your credentials in .env file.")
+                        raise ValueError("Authentication failed - check your credentials in .env file.")
                 else:
-                    logger.info(f"✅ Successfully connected to TradingView with credentials ({Config.MAX_BARS_PER_REQUEST:,} bars per request)")
+                    logger.info(f"Successfully connected to TradingView with credentials ({Config.MAX_BARS_PER_REQUEST:,} bars per request)")
             else:
                 if Config.ALLOW_NOLOGIN:
                     logger.warning("⚠️  No TradingView credentials provided - using nologin mode")
                     logger.warning("💡 Data access will be limited - add credentials for full access")
-                    self.tv = TvDatafeed()
-                    logger.info(f"📊 Connected without credentials (limited access)")
+                    self.client = TradingViewClient()
+                    logger.info("Connected without credentials (limited access)")
                 else:
                     logger.error("No TradingView credentials provided")
                     logger.error("💡 Set ALLOW_NOLOGIN=true in .env to continue without credentials")
                     raise ValueError("TradingView credentials are required for full data access")
         except Exception as e:
-            if "nologin" in str(e).lower() or (hasattr(detector, 'nologin_detected') and detector.nologin_detected):
-                logger.error("Failed to authenticate with TradingView - check your credentials")
-                raise ValueError("Authentication failed - nologin method detected. Check your credentials in .env file.")
             logger.error(f"Failed to connect to TradingView: {e}")
             raise
-        finally:
-            # Clean up the detector
-            if tvdatafeed_logger and detector in tvdatafeed_logger.handlers:
-                tvdatafeed_logger.removeHandler(detector)
     
     
     def _get_interval_object(self, timeframe: str) -> Interval:
-        """Convert timeframe string to TvDatafeed Interval object."""
+        """Convert timeframe string to Interval object."""
         interval_mapping = {
             '1m': Interval.in_1_minute,
             '3m': Interval.in_3_minute,
@@ -105,10 +82,8 @@ class TradingViewDataFetcher:
     def search_symbol(self, symbol: str, exchange: Optional[str] = None) -> List[Dict]:
         """Search for symbol on TradingView."""
         try:
-            if exchange:
-                results = self.tv.search_symbol(symbol, exchange)
-            else:
-                results = self.tv.search_symbol(symbol)
+            exchange_param = exchange if exchange else ''
+            results = self.client.search_symbol(symbol, exchange_param)
             return results
         except Exception as e:
             logger.error(f"Error searching for symbol {symbol}: {e}")
@@ -139,7 +114,7 @@ class TradingViewDataFetcher:
             
             logger.info(f"Fetching {n_bars} bars of {symbol} from {exchange} with {timeframe} timeframe")
             
-            data = self.tv.get_hist(
+            data = self.client.get_hist(
                 symbol=symbol,
                 exchange=exchange,
                 interval=interval,
@@ -167,7 +142,7 @@ class TradingViewDataFetcher:
         """
         Fetch maximum available historical data.
         
-        Note: tvdatafeed library limitation - can only fetch most recent data,
+        Note: TradingView WebSocket limitation - can only fetch most recent data,
         not historical data beyond what's immediately available.
         
         Args:
@@ -180,7 +155,7 @@ class TradingViewDataFetcher:
             DataFrame with maximum available historical data
         """
         logger.info(f"Fetching maximum available historical data for {symbol}")
-        logger.info(f"Note: tvdatafeed can only fetch recent data, not {years_back} years back")
+        logger.info(f"Note: TradingView can only fetch recent data, not {years_back} years back")
         
         # Fetch maximum bars available for this account
         data = self.get_historical_data(

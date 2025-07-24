@@ -2,7 +2,7 @@
 
 ## Overview
 
-This project provides a comprehensive Python application for fetching historical trading data from TradingView using the `tvdatafeed` library. The application is designed to work with TradingView premium accounts to access extended historical data for various trading instruments including XAUUSD (Gold), BTCUSD (Bitcoin), and other major forex and cryptocurrency pairs.
+This project provides a comprehensive Python application for fetching historical trading data from TradingView using direct WebSocket connections. The application is designed to work with TradingView premium accounts to access extended historical data for various trading instruments including XAUUSD (Gold), BTCUSD (Bitcoin), and other major forex and cryptocurrency pairs.
 
 ## Project Structure
 
@@ -12,7 +12,8 @@ src/tvc-datafeed/
 │   └── project-plan.md         # This documentation file
 ├── src/
 │   ├── main.py                 # Main application entry point
-│   ├── data_fetcher.py         # Core data fetching logic using tvdatafeed
+│   ├── data_fetcher.py         # Core data fetching logic using WebSocket client
+│   ├── tradingview_client.py   # Direct TradingView WebSocket client
 │   ├── config.py               # Configuration and credentials management
 │   ├── data_processor.py       # Data processing and formatting utilities
 │   └── utils.py                # Helper functions and utilities
@@ -61,7 +62,7 @@ src/tvc-datafeed/
 ### Core Components
 
 #### 1. TradingViewDataFetcher (`data_fetcher.py`)
-- **Purpose**: Interface with TradingView's data feed using tvdatafeed library
+- **Purpose**: Interface with TradingView's data feed using direct WebSocket client
 - **Key Methods**:
   - `get_historical_data()`: Fetch up to 5000 bars for a symbol
   - `get_extended_historical_data()`: Fetch multiple years of data through pagination
@@ -212,7 +213,8 @@ python src/main.py --list-symbols
 
 ### Python Dependencies
 ```txt
-git+https://github.com/rongardF/tvdatafeed.git
+websocket-client>=1.0.0
+requests>=2.25.0
 pandas>=1.5.0
 numpy>=1.21.0
 python-dotenv>=0.19.0
